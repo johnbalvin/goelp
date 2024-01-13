@@ -21,7 +21,10 @@ Use proxies by default, if you don't, your IP will get banned for days when yelp
     package main
 
     import (
+        "encoding/json"
         "log"
+        "os"
+
         "github.com/johnbalvin/goelp"
     )
     func main(){
