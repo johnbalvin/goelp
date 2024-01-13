@@ -36,7 +36,7 @@ Use proxies by default, if you don't, your IP will get banned for days when yelp
         }
         log.Printf("searchResult: %+v\n",searchResult)
         f, _ := os.Create("./searchResult.json")
-        json.NewEncoder(f).Encode(datas)
+        json.NewEncoder(f).Encode(searchResult)
     }
 ```
 ```Go
