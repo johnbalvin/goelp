@@ -28,7 +28,8 @@ Use proxies by default, if you don't, your IP will get banned for days when yelp
         client := goelp.DefaulClient()
         client.Language = "en_US"
         searchValue := "law"
-        searchResult, err := client.Search(30, searchValue)
+        index:=30
+        searchResult, err := client.Search(index, searchValue)
         if err != nil {
            log.Println("err: ", err)
           return
