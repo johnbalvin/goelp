@@ -2,8 +2,11 @@ package goelp
 
 import (
 	"net/url"
+	"regexp"
 	"strings"
 )
+
+var regexSpace = regexp.MustCompile(`\[\t\n\]+|[\s ]{2,}`)
 
 func ParseProxy(urlToParse, userName, password string) (*url.URL, error) {
 	urlToUse, err := url.Parse(urlToParse)
@@ -14,14 +17,5 @@ func ParseProxy(urlToParse, userName, password string) (*url.URL, error) {
 	return urlToUse, nil
 }
 func RemoveSpace(value string) string {
-	for strings.Contains(value, " ") {
-		value = strings.ReplaceAll(value, " ", " ")
-	}
-	value = strings.ReplaceAll(value, "\t", " ")
-	value = strings.ReplaceAll(value, "\n", " ")
-	for strings.Contains(value, "  ") {
-		value = strings.ReplaceAll(value, "  ", " ")
-	}
-	value = strings.TrimSpace(value)
-	return value
+	return regexSpace.ReplaceAllString(strings.TrimSpace(value), " ")
 }

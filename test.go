@@ -83,7 +83,6 @@ func test1() {
 }
 
 func test2(images bool) ([]Data, error) {
-	log.Println("----")
 	//Make sure you have write permissions
 	if err := os.MkdirAll("./test/0", 0644); err != nil {
 		return nil, trace.NewOrAdd(1, "main", "test2", err, "")
