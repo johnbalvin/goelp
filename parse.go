@@ -122,19 +122,11 @@ func parseBodyDetails(body []byte) (wrapperData, error) {
 			data.BizURL = bizURL
 			mainData := make(map[string]json.RawMessage)
 			if err := json.Unmarshal([]byte(htmlData), &mainData); err != nil {
-				errData := trace.NewOrAdd(4, "main", "parseBodyDetails", err, "")
+				errData := trace.NewOrAdd(5, "main", "parseBodyDetails", err, "")
 				log.Println(errData)
 				return
 			}
 			for label, value := range mainData {
-				if strings.Contains(label, ".business") && strings.HasSuffix(label, "})") && strings.Contains(string(value), "reviewCount") {
-					if err := json.Unmarshal(value, &data.GeneralData); err != nil {
-						errData := trace.NewOrAdd(5, "main", "parseBodyDetails", err, "")
-						log.Println(errData)
-						return
-					}
-					continue
-				}
 				if strings.Contains(label, "$BusinessPhoto") && strings.HasSuffix(label, ".photoUrl") {
 					mapData := make(map[string]string)
 					if err := json.Unmarshal(value, &mapData); err != nil {
@@ -152,58 +144,95 @@ func parseBodyDetails(body []byte) (wrapperData, error) {
 							break
 						}
 					}
+					continue
 				}
-				if strings.Contains(label, ".business") && strings.Contains(label, ".claimability") && strings.HasSuffix(label, "})") {
-					var claimed claimed
-					if err := json.Unmarshal(value, &claimed); err != nil {
+				if !strings.Contains(label, ".business") {
+					continue
+				}
+				if strings.Contains(string(value), "reviewCount") && strings.HasSuffix(label, "})") {
+					if err := json.Unmarshal(value, &data.GeneralData); err != nil {
 						errData := trace.NewOrAdd(7, "main", "parseBodyDetails", err, "")
 						log.Println(errData)
 						return
 					}
+					continue
+				}
+				if strings.Contains(label, ".claimability") && strings.HasSuffix(label, "})") {
+					var claimed claimed
+					if err := json.Unmarshal(value, &claimed); err != nil {
+						errData := trace.NewOrAdd(8, "main", "parseBodyDetails", err, "")
+						log.Println(errData)
+						return
+					}
 					data.Isclaimed = claimed.IsClaimed
-				} else if strings.Contains(label, ".business") && strings.Contains(label, ".map") {
-					mapData := make(map[string]string)
-					if err := json.Unmarshal(value, &mapData); err != nil {
+					continue
+				}
+				if strings.Contains(label, ".operationHours") && strings.Contains(label, ".regularHoursMergedWithSpecialHoursForCurrentWeek") {
+					var operationHourData operationHourData
+					if err := json.Unmarshal(value, &operationHourData); err != nil {
 						errData := trace.NewOrAdd(9, "main", "parseBodyDetails", err, "")
 						log.Println(errData)
 						return
 					}
+					data.OperationHourData = append(data.OperationHourData, operationHourData)
+					continue
+				}
+				if strings.Contains(label, ".organizedProperties") && strings.Contains(label, ".properties") && strings.Contains(label, "clientPlatform") {
+					var amenity amenity
+					if err := json.Unmarshal(value, &amenity); err != nil {
+						errData := trace.NewOrAdd(10, "main", "parseBodyDetails", err, "")
+						log.Println(errData)
+						return
+					}
+					data.Amenities = append(data.Amenities, amenity)
+					continue
+				}
+				if strings.Contains(label, ".map") {
+					mapData := make(map[string]string)
+					if err := json.Unmarshal(value, &mapData); err != nil {
+						errData := trace.NewOrAdd(11, "main", "parseBodyDetails", err, "")
+						log.Println(errData)
+						return
+					}
 					src := mapData["src"]
-					if src != "" {
-						urlParsed, err := url.Parse(src)
+					if src == "" {
+						continue
+					}
+					urlParsed, err := url.Parse(src)
+					if err != nil {
+						errData := trace.NewOrAdd(12, "main", "parseBodyDetails", err, "")
+						log.Println(errData)
+						return
+					}
+					query := urlParsed.Query()
+					center := query.Get("center")
+					splited := strings.Split(center, ",")
+					if len(splited) == 2 {
+						latitude, err := strconv.ParseFloat(splited[0], 64)
 						if err != nil {
-							errData := trace.NewOrAdd(9, "main", "parseBodyDetails", err, "")
+							errData := trace.NewOrAdd(13, "main", "parseBodyDetails", err, "")
 							log.Println(errData)
 							return
 						}
-						query := urlParsed.Query()
-						center := query.Get("center")
-						splited := strings.Split(center, ",")
-						if len(splited) == 2 {
-							latitude, err := strconv.ParseFloat(splited[0], 64)
-							if err != nil {
-								errData := trace.NewOrAdd(9, "main", "parseBodyDetails", err, "")
-								log.Println(errData)
-								return
-							}
-							longitude, err := strconv.ParseFloat(splited[1], 64)
-							if err != nil {
-								errData := trace.NewOrAdd(9, "main", "parseBodyDetails", err, "")
-								log.Println(errData)
-								return
-							}
-							data.Coordinates.Latitude = latitude
-							data.Coordinates.Longitude = longitude
+						longitude, err := strconv.ParseFloat(splited[1], 64)
+						if err != nil {
+							errData := trace.NewOrAdd(14, "main", "parseBodyDetails", err, "")
+							log.Println(errData)
+							return
 						}
+						data.Coordinates.Latitude = latitude
+						data.Coordinates.Longitude = longitude
 					}
-				} else if strings.Contains(label, ".business") && strings.Contains(label, ".reviews") {
+					continue
+				}
+				if strings.Contains(label, ".reviews") {
 					if !(strings.Contains(label, "author") || strings.Contains(label, "createdAt") || strings.Contains(label, "text") || strings.Contains(label, "rating") || strings.HasSuffix(label, ".node")) {
 						continue
 					}
 					if strings.HasSuffix(label, ".node") {
 						var rating rating
 						if err := json.Unmarshal(value, &rating); err != nil {
-							errData := trace.NewOrAdd(8, "main", "parseBodyDetails", err, "")
+							errData := trace.NewOrAdd(15, "main", "parseBodyDetails", err, "")
 							log.Println(errData)
 							return
 						}
@@ -212,7 +241,7 @@ func parseBodyDetails(body []byte) (wrapperData, error) {
 					}
 					mapData := make(map[string]string)
 					if err := json.Unmarshal(value, &mapData); err != nil {
-						errData := trace.NewOrAdd(9, "main", "parseBodyDetails", err, "")
+						errData := trace.NewOrAdd(16, "main", "parseBodyDetails", err, "")
 						log.Println(errData)
 						return
 					}
@@ -230,37 +259,21 @@ func parseBodyDetails(body []byte) (wrapperData, error) {
 						review := mapData["full"]
 						mapReviewsText[label] = review
 					}
-				} else if strings.Contains(label, ".business") && strings.Contains(label, ".operationHours") && strings.Contains(label, ".regularHoursMergedWithSpecialHoursForCurrentWeek") {
-					var operationHourData operationHourData
-					if err := json.Unmarshal(value, &operationHourData); err != nil {
-						errData := trace.NewOrAdd(10, "main", "parseBodyDetails", err, "")
-						log.Println(errData)
-						return
-					}
-					data.OperationHourData = append(data.OperationHourData, operationHourData)
-				} else if strings.Contains(label, ".business") && strings.Contains(label, ".organizedProperties") && strings.Contains(label, ".properties") && strings.Contains(label, "clientPlatform") {
-					var amenity amenity
-					if err := json.Unmarshal(value, &amenity); err != nil {
-						errData := trace.NewOrAdd(11, "main", "parseBodyDetails", err, "")
-						log.Println(errData)
-						return
-					}
-					data.Amenities = append(data.Amenities, amenity)
-				} else if strings.Contains(label, ".business") && strings.Contains(label, ".communityQuestions") {
+					continue
+				}
+				if strings.Contains(label, ".communityQuestions") {
 					if strings.HasSuffix(label, "})") && strings.Contains(string(value), "edges") {
 						var comunityQuestion comunityQuestion
 						if err := json.Unmarshal(value, &comunityQuestion); err != nil {
-							errData := trace.NewOrAdd(12, "main", "parseBodyDetails", err, "")
+							errData := trace.NewOrAdd(17, "main", "parseBodyDetails", err, "")
 							log.Println(errData)
 							return
 						}
 						data.QuestionsNumber = comunityQuestion.TotalCount
-						continue
-					}
-					if strings.HasSuffix(label, ".node") {
+					} else if strings.HasSuffix(label, ".node") {
 						var comunityQuestion comunityQuestion
 						if err := json.Unmarshal(value, &comunityQuestion); err != nil {
-							errData := trace.NewOrAdd(13, "main", "parseBodyDetails", err, "")
+							errData := trace.NewOrAdd(18, "main", "parseBodyDetails", err, "")
 							log.Println(errData)
 							return
 						}
@@ -268,7 +281,7 @@ func parseBodyDetails(body []byte) (wrapperData, error) {
 					} else if strings.HasSuffix(label, ".topAnswer") {
 						var comunityQuestion comunityQuestion
 						if err := json.Unmarshal(value, &comunityQuestion); err != nil {
-							errData := trace.NewOrAdd(14, "main", "parseBodyDetails", err, "")
+							errData := trace.NewOrAdd(19, "main", "parseBodyDetails", err, "")
 							log.Println(errData)
 							return
 						}
@@ -279,7 +292,7 @@ func parseBodyDetails(body []byte) (wrapperData, error) {
 					} else if strings.HasSuffix(label, ".createdAt") {
 						mapData := make(map[string]string)
 						if err := json.Unmarshal(value, &mapData); err != nil {
-							errData := trace.NewOrAdd(15, "main", "parseBodyDetails", err, "")
+							errData := trace.NewOrAdd(20, "main", "parseBodyDetails", err, "")
 							log.Println(errData)
 							return
 						}
@@ -287,7 +300,7 @@ func parseBodyDetails(body []byte) (wrapperData, error) {
 					} else if strings.HasSuffix(label, ".author") {
 						mapData := make(map[string]string)
 						if err := json.Unmarshal(value, &mapData); err != nil {
-							errData := trace.NewOrAdd(16, "main", "parseBodyDetails", err, "")
+							errData := trace.NewOrAdd(21, "main", "parseBodyDetails", err, "")
 							log.Println(errData)
 							return
 						}

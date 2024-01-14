@@ -30,6 +30,7 @@ Use proxies by default, if you don't, your IP will get banned for days when yelp
     func main(){
         client := goelp.DefaulClient()
         client.Language = "en_US"
+        client.Location = "San Francisco, CA"
         searchValue := "law"
         index:=30
         searchResult, err := client.Search(index, searchValue)
@@ -50,7 +51,7 @@ Use proxies by default, if you don't, your IP will get banned for days when yelp
     )
     func main(){
         //you need to have write permissions, the result will be save inside folder "test"
-        gobnb.TestSaveOnDisk()
+        goelp.TestSaveOnDisk()
     }
 ```
 
@@ -151,12 +152,12 @@ Use proxies by default, if you don't, your IP will get banned for days when yelp
             log.Println("test 1 -> err: ", err)
             return
         }
-        proxyURL, err := gobnb.ParseProxy("http://[IP | domain]:[port]", "username", "password")
+        proxyURL, err := goelp.ParseProxy("http://[IP | domain]:[port]", "username", "password")
         if err != nil {
             log.Println("test:1 -> err: ", err)
             return
         }
-        client := gobnb.NewClient("es_MX", "San Francisco, CA", goelp.SortHighestRate, proxyURL)
+        client := goelp.NewClient("es_MX", "San Francisco, CA", goelp.SortHighestRate, proxyURL)
         yelpBizURL:="https://www.yelp.com.mx/biz/[yelp bizness name]"
         data,  err := client.GetFromYelpBizURL(yelpBizURL)
         if err != nil {

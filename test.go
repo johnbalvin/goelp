@@ -38,8 +38,8 @@ func test1() {
 		log.Println("test2:1 -> err: ", err)
 		return
 	}
-	//location := "San Francisco, CA"
 	client := DefaulClient()
+	client.Location = "San Francisco, CA"
 	client.Language = "es_MX"
 	searchValue := "law"
 	searchResults, err := client.Search(30, searchValue)
