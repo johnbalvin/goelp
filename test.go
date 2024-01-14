@@ -83,6 +83,7 @@ func test1() {
 }
 
 func test2(images bool) ([]Data, error) {
+	log.Println("----")
 	//Make sure you have write permissions
 	if err := os.MkdirAll("./test/0", 0644); err != nil {
 		return nil, trace.NewOrAdd(1, "main", "test2", err, "")
@@ -95,13 +96,8 @@ func test2(images bool) ([]Data, error) {
 	if err != nil {
 		return nil, trace.NewOrAdd(2, "main", "test2", err, "")
 	}
-	f, _ := os.Create("./test/searchResults.json")
-	json.NewEncoder(f).Encode(searchResults)
-	f.Close()
 	var datas []Data
 	for i, item := range searchResults.Items {
-		folderPath := fmt.Sprintf("./test/%d/images", i)
-		os.MkdirAll(folderPath, 0644)
 		data, err := GetFromYelpBizURL(item.YelpURL, nil)
 		if err != nil {
 			errData := trace.NewOrAdd(3, "main", "test2", err, "")
